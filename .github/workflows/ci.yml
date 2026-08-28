@@ -1,0 +1,43 @@
+name: Build and test VulHub
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  test-and-build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        shell: pwsh
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+          python -m pip install -r requirements-build.txt
+
+      - name: Run automated tests
+        run: python -m unittest discover -s scripts -p "test_*.py" -v
+
+      - name: Build Windows release
+        run: powershell -ExecutionPolicy Bypass -File packaging/build_onedir.ps1
+
+      - name: Upload Windows release
+        uses: actions/upload-artifact@v4
+        with:
+          name: VulHub-Windows-x64
+          path: |
+            release/VulHub-Windows-x64.zip
+            release/SHA256SUMS.txt
+          if-no-files-found: error
